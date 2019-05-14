@@ -2,22 +2,23 @@ package goproxmox
 
 import (
 	"errors"
+	"strconv"
 	"time"
 )
 
 type Node interface {
-	//ListLXC() ([]string, error)
+	ListLXC() ([]string, error)
 	GetLXC(lxcid string) VBase
 
-	//ListVM() error
+	ListVM() ([]string, error)
 	GetVM(vmid string) VBase
 
 	WaitForTask(taskid string, timeout time.Duration) error
 }
 
 type nodeImpl struct {
-	proxmox *proxmoxImpl
-	id      string
+	proxmox *proxmoxImpl `json:"-"`
+	id      string       `json:"vmid"`
 }
 
 func (n *nodeImpl) GetLXC(lxcid string) VBase {
@@ -29,20 +30,15 @@ func (n *nodeImpl) GetVM(vmid string) VBase {
 }
 
 func (n *nodeImpl) ListLXC() ([]string, error) {
-	resp, err := n.proxmox.session.Get(n.proxmox.serverURL+"/api2/json/nodes/"+n.id+"/lxc", nil)
-	if err != nil {
-		return nil, err
-	}
-	if resp.StatusCode >= 400 {
-		return nil, errors.New(resp.RawResponse.Status)
-	}
-
-	// TODO
-	return nil, nil
+	return n.list("lxc")
 }
 
 func (n *nodeImpl) ListVM() ([]string, error) {
-	resp, err := n.proxmox.session.Get(n.proxmox.serverURL+"/api2/json/nodes/"+n.id+"/qemu", nil)
+	return n.list("qemu")
+}
+
+func (n *nodeImpl) list(vmtype string) ([]string, error) {
+	resp, err := n.proxmox.session.Get(n.proxmox.serverURL+"/api2/json/nodes/"+n.id+"/"+vmtype, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -50,8 +46,18 @@ func (n *nodeImpl) ListVM() ([]string, error) {
 		return nil, errors.New(resp.RawResponse.Status)
 	}
 
-	// TODO
-	return nil, nil
+	var ret struct {
+		Data []struct {
+			VMID string `json:"vmid"`
+		} `json:"data"`
+	}
+	err = resp.JSON(&ret)
+	retstring := []string{}
+	for _, lxc := range ret.Data {
+		retstring = append(retstring, lxc.VMID)
+	}
+
+	return retstring, err
 }
 
 func (n *nodeImpl) WaitForTask(taskid string, timeout time.Duration) error {
@@ -90,14 +96,24 @@ func (n *nodeImpl) maxItem() (int, error) {
 	}
 
 	for _, x := range lxclist {
-		if ret < int(x["vmid"]) {
-			ret = int(x["vmid"])
+		vmid, err := strconv.Atoi(x)
+		if err != nil {
+			continue
+		}
+
+		if ret < vmid {
+			ret = vmid
 		}
 	}
 
 	for _, x := range vmlist {
-		if ret < int(x["vmid"]) {
-			ret = int(x["vmid"])
+		vmid, err := strconv.Atoi(x)
+		if err != nil {
+			continue
+		}
+
+		if ret < vmid {
+			ret = vmid
 		}
 	}
 

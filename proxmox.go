@@ -4,6 +4,7 @@ import (
 	"errors"
 	"github.com/levigross/grequests"
 	"net/http"
+	"net/url"
 	"time"
 )
 
@@ -47,6 +48,12 @@ type proxmoxImpl struct {
 }
 
 func (p *proxmoxImpl) Login(username string, password string) error {
+	serverURLObject, err := url.Parse(p.serverURL)
+	if err != nil {
+		// TODO: move to New()
+		return err
+	}
+
 	resp, err := p.session.Post(p.serverURL+"/api2/json/access/ticket", &grequests.RequestOptions{
 		Data: map[string]string{
 			"username": username,
@@ -61,17 +68,27 @@ func (p *proxmoxImpl) Login(username string, password string) error {
 	}
 
 	loginresponse := struct {
-		Data map[string]string `json:"data"`
+		Data struct {
+			CSRFPreventionToken string                 `json:"CSRFPreventionToken"`
+			Ticket              string                 `json:"ticket"`
+			Cap                 map[string]interface{} `json:"cap"`
+			UserName            string                 `json:"username"`
+		} `json:"data"`
 	}{}
 	err = resp.JSON(&loginresponse)
 	if err != nil {
 		return err
 	}
 
-	p.ticket = loginresponse.Data["ticket"]
-	p.csrf = loginresponse.Data["CSRFPreventionToken"]
-	p.session.RequestOptions.Headers["CSRFPreventionToken"] = p.csrf
-	p.session.RequestOptions.Cookies = append(p.session.RequestOptions.Cookies, &http.Cookie{Name: "PVEAuthCookie", Value: p.ticket})
+	p.ticket = loginresponse.Data.Ticket
+	p.csrf = loginresponse.Data.CSRFPreventionToken
+	p.session.RequestOptions.Headers = map[string]string{
+		"CSRFPreventionToken": p.csrf,
+	}
+	p.session.HTTPClient.Jar.SetCookies(serverURLObject, []*http.Cookie{{
+		Name:  "PVEAuthCookie",
+		Value: p.ticket,
+	}})
 	return nil
 }
 

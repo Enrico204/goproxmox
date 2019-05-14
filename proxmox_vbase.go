@@ -8,7 +8,9 @@ import (
 )
 
 type VBase interface {
-	Status() (interface{}, error)
+	Id() string
+
+	Status() (*LXCStatus, error)
 	Start(timeout time.Duration) error
 	Stop(timeout time.Duration) error
 	Shutdown(timeout time.Duration) error
@@ -17,14 +19,44 @@ type VBase interface {
 	//Info() error
 }
 
+type LXCStatus struct {
+	VMID      string      `json:"vmid"`
+	Name      string      `json:"name"`
+	Template  string      `json:"template"`
+	PID       string      `json:"pid"`
+	CPUs      int         `json:"cpus"`
+	CPU       float64     `json:"cpu"`
+	Mem       float64     `json:"mem"`
+	MaxMem    int64       `json:"maxmem"`
+	Swap      float64     `json:"swap"`
+	MaxSwap   int64       `json:"maxswap"`
+	Uptime    int         `json:"uptime"`
+	Disk      interface{} `json:"disk"`    // Sometimes it's an empty string?
+	MaxDisk   interface{} `json:"maxdisk"` // Sometimes it's an empty string?
+	DiskRead  int64       `json:"diskread"`
+	DiskWrite int64       `json:"diskwrite"`
+	Lock      string      `json:"lock"`
+	Status    string      `json:"status"`
+	Type      string      `json:"type"`
+	HA        struct {
+		Managed int `json:"managed"`
+	} `json:"ha"`
+	NetIn  int64 `json:"netin"`
+	NetOut int64 `json:"netout"`
+}
+
 type vbaseimpl struct {
 	vmtype string // Can be "lxc" or "qemu"
 	id     string
 	node   *nodeImpl
 }
 
-func (v *vbaseimpl) Status() (interface{}, error) {
-	resp, err := v.node.proxmox.session.Get(fmt.Sprintf("%s/api2/json/nodes/%s/%s/%s/status/current", v.node.id, v.id, v.vmtype, v.id), nil)
+func (v *vbaseimpl) Id() string {
+	return v.id
+}
+
+func (v *vbaseimpl) Status() (*LXCStatus, error) {
+	resp, err := v.node.proxmox.session.Get(fmt.Sprintf("%s/api2/json/nodes/%s/%s/%s/status/current", v.node.proxmox.serverURL, v.node.id, v.vmtype, v.id), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -32,12 +64,16 @@ func (v *vbaseimpl) Status() (interface{}, error) {
 		return nil, errors.New(resp.RawResponse.Status)
 	}
 
-	// TODO
-	return nil, nil
+	var ret struct {
+		Data LXCStatus `json:"data"`
+	}
+	fmt.Println(resp.String())
+	err = resp.JSON(&ret)
+	return &ret.Data, err
 }
 
 func (v *vbaseimpl) Start(timeout time.Duration) error {
-	resp, err := v.node.proxmox.session.Post(fmt.Sprintf("%s/api2/json/nodes/%s/%s/%s/status/start", v.node.proxmox.serverURL, v.id, v.vmtype, v.id), nil)
+	resp, err := v.node.proxmox.session.Post(fmt.Sprintf("%s/api2/json/nodes/%s/%s/%s/status/start", v.node.proxmox.serverURL, v.node.id, v.vmtype, v.id), nil)
 	if err != nil {
 		return err
 	}
@@ -55,7 +91,7 @@ func (v *vbaseimpl) Start(timeout time.Duration) error {
 }
 
 func (v *vbaseimpl) Stop(timeout time.Duration) error {
-	resp, err := v.node.proxmox.session.Post(fmt.Sprintf("%s/api2/json/nodes/%s/%s/%s/status/stop", v.node.proxmox.serverURL, v.id, v.vmtype, v.id), nil)
+	resp, err := v.node.proxmox.session.Post(fmt.Sprintf("%s/api2/json/nodes/%s/%s/%s/status/stop", v.node.proxmox.serverURL, v.node.id, v.vmtype, v.id), nil)
 	if err != nil {
 		return err
 	}
@@ -77,7 +113,7 @@ func (v *vbaseimpl) Shutdown(timeout time.Duration) error {
 	if timeout > 0 {
 		timeoutString = fmt.Sprint(int(timeout / time.Second))
 	}
-	resp, err := v.node.proxmox.session.Post(fmt.Sprintf("%s/api2/json/nodes/%s/%s/%s/status/shutdown", v.node.proxmox.serverURL, v.id, v.vmtype, v.id), &grequests.RequestOptions{
+	resp, err := v.node.proxmox.session.Post(fmt.Sprintf("%s/api2/json/nodes/%s/%s/%s/status/shutdown", v.node.proxmox.serverURL, v.node.id, v.vmtype, v.id), &grequests.RequestOptions{
 		Data: map[string]string{
 			"timeout": timeoutString,
 		},
@@ -99,7 +135,7 @@ func (v *vbaseimpl) Shutdown(timeout time.Duration) error {
 }
 
 func (v *vbaseimpl) Delete(timeout time.Duration) error {
-	resp, err := v.node.proxmox.session.Delete(fmt.Sprintf("%s/api2/json/nodes/%s/%s/%s", v.node.proxmox.serverURL, v.id, v.vmtype, v.id), nil)
+	resp, err := v.node.proxmox.session.Delete(fmt.Sprintf("%s/api2/json/nodes/%s/%s/%s", v.node.proxmox.serverURL, v.node.id, v.vmtype, v.id), nil)
 	if err != nil {
 		return err
 	}
@@ -139,7 +175,7 @@ func (v *vbaseimpl) Clone(newhostname string, pool string, full bool, timeout ti
 		reqbody["full"] = "1"
 	}
 
-	resp, err := v.node.proxmox.session.Post(fmt.Sprintf("%s/api2/json/nodes/%s/%s/%d/clone", v.node.proxmox.serverURL, v.node.id, v.vmtype, v.id),
+	resp, err := v.node.proxmox.session.Post(fmt.Sprintf("%s/api2/json/nodes/%s/%s/%s/clone", v.node.proxmox.serverURL, v.node.id, v.vmtype, v.id),
 		&grequests.RequestOptions{
 			Data: reqbody,
 		})
