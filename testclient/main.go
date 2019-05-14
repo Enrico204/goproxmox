@@ -12,20 +12,38 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	node := px.GetNode(os.Args[4])
+	//node := px.GetNode(os.Args[4])
 
-	fmt.Println(node.ListLXC())
-	fmt.Println(node.ListVM())
+	//networks, err := node.ListNetworks()
+	//fmt.Println(err)
+	//for _, net := range networks {
+	//	fmt.Print(net.IFace, " (", net.Type, ")")
+	//	if net.Address != nil {
+	//		fmt.Print(" -> ", *net.Address)
+	//	}
+	//	if net.Netmask != nil {
+	//		fmt.Print("/", *net.Netmask)
+	//	}
+	//	if net.Gateway != nil {
+	//		fmt.Print(" , ", *net.Gateway)
+	//	}
+	//
+	//	if net.OVS_Bridge != nil {
+	//		fmt.Print(" bridged to ", *net.OVS_Bridge)
+	//	}
+	//	if net.OVS_Ports != nil {
+	//		fmt.Print(" bridging ports: ", *net.OVS_Ports)
+	//	}
+	//	fmt.Println()
+	//}
 
-	lxclist, _ := node.ListLXC()
-	for _, lxcid := range lxclist {
-		lxc := node.GetLXC(lxcid)
-		fmt.Println(lxc.Status())
-	}
-
-	vmlist, _ := node.ListVM()
-	for _, vmid := range vmlist {
-		vm := node.GetVM(vmid)
-		fmt.Println(vm.Status())
-	}
+	//comments := "pippo"
+	//err = node.CreateNetworkConfig(goproxmox.Network{
+	//	IFace: "vmbr10",
+	//	Type: "bridge",
+	//	Comments: &comments,
+	//})
+	//err = node.ReloadNetworkConfig()
+	//err = node.RevertNetworkChanges()
+	fmt.Println(err)
 }

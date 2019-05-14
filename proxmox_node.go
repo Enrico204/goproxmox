@@ -9,9 +9,18 @@ import (
 type Node interface {
 	ListLXC() ([]string, error)
 	GetLXC(lxcid string) VBase
+	NewLXC(lxc LXC) error
 
 	ListVM() ([]string, error)
 	GetVM(vmid string) VBase
+
+	ListNetworks() ([]Network, error)
+	//GetNetwork(networkid string) Network
+	RevertNetworkChanges() error
+	ReloadNetworkConfig() error
+	CreateNetworkConfig(network Network) error
+	UpdateNetwork(network Network) error
+	DeleteNetwork(network Network) error
 
 	WaitForTask(taskid string, timeout time.Duration) error
 }

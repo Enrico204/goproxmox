@@ -67,7 +67,6 @@ func (v *vbaseimpl) Status() (*LXCStatus, error) {
 	var ret struct {
 		Data LXCStatus `json:"data"`
 	}
-	fmt.Println(resp.String())
 	err = resp.JSON(&ret)
 	return &ret.Data, err
 }
