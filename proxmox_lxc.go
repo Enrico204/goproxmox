@@ -97,12 +97,12 @@ func (lxc *LXC) ToMap() map[string]string {
 	return postVars
 }
 
-func (n *nodeImpl) NewLXC(lxc LXC, timeout time.Duration) error {
+func (n *nodeImpl) NewLXC(lxc LXC, timeout time.Duration) (string, error) {
 
 	if lxc.VMID == "" {
 		newVmId, err := n.proxmox.NextID()
 		if err != nil {
-			return err
+			return "", err
 		}
 		lxc.VMID = fmt.Sprint(newVmId)
 	}
@@ -111,17 +111,17 @@ func (n *nodeImpl) NewLXC(lxc LXC, timeout time.Duration) error {
 		Data: lxc.ToMap(),
 	})
 	if err != nil {
-		return err
+		return "", err
 	}
 	if resp.StatusCode >= 400 {
-		return errors.New(resp.RawResponse.Status)
+		return "", errors.New(resp.RawResponse.Status)
 	}
 
 	ret := map[string]string{}
 	err = resp.JSON(&ret)
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	return n.WaitForTask(ret["data"], timeout)
+	return lxc.VMID, n.WaitForTask(ret["data"], timeout)
 }

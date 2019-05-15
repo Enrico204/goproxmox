@@ -25,7 +25,7 @@ type Proxmox interface {
 	PoolCreate(name string, comment string) error
 	PoolDelete(name string) error
 	PoolDeleteRecursive(name string, timeout time.Duration) error
-	//PoolList() ([]string, error)
+	PoolList() ([]string, error)
 	PoolInfo(name string) (Pool, error)
 
 	GetNode(nodeId string) Node

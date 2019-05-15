@@ -8,7 +8,7 @@ import (
 type Node interface {
 	ListLXC() ([]string, error)
 	GetLXC(lxcid string) VBase
-	NewLXC(lxc LXC, timeout time.Duration) error
+	NewLXC(lxc LXC, timeout time.Duration) (string, error)
 
 	ListVM() ([]string, error)
 	GetVM(vmid string) VBase
