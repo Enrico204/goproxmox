@@ -6,6 +6,7 @@ import (
 	"github.com/levigross/grequests"
 	"reflect"
 	"strings"
+	"time"
 )
 
 type LXC struct {
@@ -96,7 +97,16 @@ func (lxc *LXC) ToMap() map[string]string {
 	return postVars
 }
 
-func (n *nodeImpl) NewLXC(lxc LXC) error {
+func (n *nodeImpl) NewLXC(lxc LXC, timeout time.Duration) error {
+
+	if lxc.VMID == "" {
+		newVmId, err := n.proxmox.NextID()
+		if err != nil {
+			return err
+		}
+		lxc.VMID = fmt.Sprint(newVmId)
+	}
+
 	resp, err := n.proxmox.session.Post(n.proxmox.serverURL+"/api2/json/nodes/"+n.id+"/lxc", &grequests.RequestOptions{
 		Data: lxc.ToMap(),
 	})
@@ -106,5 +116,12 @@ func (n *nodeImpl) NewLXC(lxc LXC) error {
 	if resp.StatusCode >= 400 {
 		return errors.New(resp.RawResponse.Status)
 	}
-	return nil
+
+	ret := map[string]string{}
+	err = resp.JSON(&ret)
+	if err != nil {
+		return err
+	}
+
+	return n.WaitForTask(ret["data"], timeout)
 }

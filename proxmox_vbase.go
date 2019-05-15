@@ -43,6 +43,8 @@ type LXCStatus struct {
 	} `json:"ha"`
 	NetIn  int64 `json:"netin"`
 	NetOut int64 `json:"netout"`
+
+	Node *string `json:"node"`
 }
 
 type vbaseimpl struct {
@@ -152,13 +154,13 @@ func (v *vbaseimpl) Delete(timeout time.Duration) error {
 }
 
 func (v *vbaseimpl) Clone(newhostname string, pool string, full bool, timeout time.Duration) error {
-	maxVmId, err := v.node.maxItem()
+	newVmId, err := v.node.proxmox.NextID()
 	if err != nil {
 		return err
 	}
 
 	reqbody := map[string]string{
-		"newid": fmt.Sprint(maxVmId + 1),
+		"newid": newVmId,
 	}
 	if pool != "" {
 		reqbody["pool"] = pool

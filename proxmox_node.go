@@ -2,25 +2,24 @@ package goproxmox
 
 import (
 	"errors"
-	"strconv"
 	"time"
 )
 
 type Node interface {
 	ListLXC() ([]string, error)
 	GetLXC(lxcid string) VBase
-	NewLXC(lxc LXC) error
+	NewLXC(lxc LXC, timeout time.Duration) error
 
 	ListVM() ([]string, error)
 	GetVM(vmid string) VBase
 
 	ListNetworks() ([]Network, error)
 	//GetNetwork(networkid string) Network
-	RevertNetworkChanges() error
-	ReloadNetworkConfig() error
-	CreateNetworkConfig(network Network) error
-	UpdateNetwork(network Network) error
-	DeleteNetwork(network Network) error
+	RevertNetworkChanges(timeout time.Duration) error
+	ReloadNetworkConfig(timeout time.Duration) error
+	CreateNetworkConfig(network Network, timeout time.Duration) error
+	UpdateNetwork(network Network, timeout time.Duration) error
+	DeleteNetwork(network Network, timeout time.Duration) error
 
 	WaitForTask(taskid string, timeout time.Duration) error
 }
@@ -71,7 +70,7 @@ func (n *nodeImpl) list(vmtype string) ([]string, error) {
 
 func (n *nodeImpl) WaitForTask(taskid string, timeout time.Duration) error {
 	starttime := time.Now()
-	for timeout <= 0 || (time.Now().Sub(starttime) > timeout) {
+	for timeout <= 0 || (time.Now().Sub(starttime) < timeout) {
 		resp, err := n.proxmox.session.Get(n.proxmox.serverURL+"/api2/json/nodes/"+n.id+"/tasks/"+taskid+"/status", nil)
 		if err != nil {
 			return err
@@ -89,42 +88,5 @@ func (n *nodeImpl) WaitForTask(taskid string, timeout time.Duration) error {
 		}
 		time.Sleep(500 * time.Millisecond)
 	}
-	return errors.New("Wait timeout")
-}
-
-func (n *nodeImpl) maxItem() (int, error) {
-	ret := 1
-	lxclist, err := n.ListLXC()
-	if err != nil {
-		return 0, err
-	}
-
-	vmlist, err := n.ListVM()
-	if err != nil {
-		return 0, err
-	}
-
-	for _, x := range lxclist {
-		vmid, err := strconv.Atoi(x)
-		if err != nil {
-			continue
-		}
-
-		if ret < vmid {
-			ret = vmid
-		}
-	}
-
-	for _, x := range vmlist {
-		vmid, err := strconv.Atoi(x)
-		if err != nil {
-			continue
-		}
-
-		if ret < vmid {
-			ret = vmid
-		}
-	}
-
-	return ret, nil
+	return errors.New("Timeout while waiting for the operation to complete")
 }

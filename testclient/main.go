@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"gitlab.com/Enrico204/goproxmox"
 	"os"
 )
@@ -45,5 +44,7 @@ func main() {
 	//})
 	//err = node.ReloadNetworkConfig()
 	//err = node.RevertNetworkChanges()
-	fmt.Println(err)
+
+	//err = px.PoolDeleteRecursive("SIM-1-1", 1 * time.Minute)
+	//fmt.Println(err)
 }

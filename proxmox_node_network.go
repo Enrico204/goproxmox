@@ -6,6 +6,7 @@ import (
 	"github.com/levigross/grequests"
 	"reflect"
 	"strings"
+	"time"
 )
 
 type Network struct {
@@ -64,7 +65,7 @@ func (net *Network) ToMap() map[string]string {
 	return postVars
 }
 
-func (n *nodeImpl) CreateNetworkConfig(network Network) error {
+func (n *nodeImpl) CreateNetworkConfig(network Network, timeout time.Duration) error {
 	resp, err := n.proxmox.session.Post(n.proxmox.serverURL+"/api2/json/nodes/"+n.id+"/network", &grequests.RequestOptions{
 		Data: network.ToMap(),
 	})
@@ -74,7 +75,14 @@ func (n *nodeImpl) CreateNetworkConfig(network Network) error {
 	if resp.StatusCode >= 400 {
 		return errors.New(resp.RawResponse.Status)
 	}
-	return nil
+
+	ret := map[string]string{}
+	err = resp.JSON(&ret)
+	if err != nil {
+		return err
+	}
+
+	return n.WaitForTask(ret["data"], timeout)
 }
 
 func (n *nodeImpl) ListNetworks() ([]Network, error) {
@@ -93,7 +101,7 @@ func (n *nodeImpl) ListNetworks() ([]Network, error) {
 	return ret.Data, err
 }
 
-func (n *nodeImpl) RevertNetworkChanges() error {
+func (n *nodeImpl) RevertNetworkChanges(timeout time.Duration) error {
 	resp, err := n.proxmox.session.Delete(n.proxmox.serverURL+"/api2/json/nodes/"+n.id+"/network", nil)
 	if err != nil {
 		return err
@@ -101,10 +109,17 @@ func (n *nodeImpl) RevertNetworkChanges() error {
 	if resp.StatusCode >= 400 {
 		return errors.New(resp.RawResponse.Status)
 	}
-	return nil
+
+	ret := map[string]string{}
+	err = resp.JSON(&ret)
+	if err != nil {
+		return err
+	}
+
+	return n.WaitForTask(ret["data"], timeout)
 }
 
-func (n *nodeImpl) ReloadNetworkConfig() error {
+func (n *nodeImpl) ReloadNetworkConfig(timeout time.Duration) error {
 	resp, err := n.proxmox.session.Put(n.proxmox.serverURL+"/api2/json/nodes/"+n.id+"/network", nil)
 	if err != nil {
 		return err
@@ -112,14 +127,21 @@ func (n *nodeImpl) ReloadNetworkConfig() error {
 	if resp.StatusCode >= 400 {
 		return errors.New(resp.RawResponse.Status)
 	}
-	return nil
+
+	ret := map[string]string{}
+	err = resp.JSON(&ret)
+	if err != nil {
+		return err
+	}
+
+	return n.WaitForTask(ret["data"], timeout)
 }
 
-func (n *nodeImpl) UpdateNetwork(network Network) error {
+func (n *nodeImpl) UpdateNetwork(network Network, timeout time.Duration) error {
 	return errors.New("Not implemented")
 }
 
-func (n *nodeImpl) DeleteNetwork(network Network) error {
+func (n *nodeImpl) DeleteNetwork(network Network, timeout time.Duration) error {
 	resp, err := n.proxmox.session.Delete(n.proxmox.serverURL+"/api2/json/nodes/"+n.id+"/network/"+network.IFace, nil)
 	if err != nil {
 		return err
@@ -127,5 +149,12 @@ func (n *nodeImpl) DeleteNetwork(network Network) error {
 	if resp.StatusCode >= 400 {
 		return errors.New(resp.RawResponse.Status)
 	}
-	return nil
+
+	ret := map[string]string{}
+	err = resp.JSON(&ret)
+	if err != nil {
+		return err
+	}
+
+	return n.WaitForTask(ret["data"], timeout)
 }

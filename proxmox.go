@@ -8,7 +8,9 @@ import (
 	"time"
 )
 
-type Pool interface {
+type Pool struct {
+	Containers []LXCStatus
+	//VirtualMachines []VMStatus
 }
 
 type Proxmox interface {
@@ -22,10 +24,13 @@ type Proxmox interface {
 
 	PoolCreate(name string, comment string) error
 	PoolDelete(name string) error
+	PoolDeleteRecursive(name string, timeout time.Duration) error
 	//PoolList() ([]string, error)
-	//PoolInfo(name string) (Pool, error)
+	PoolInfo(name string) (Pool, error)
 
 	GetNode(nodeId string) Node
+
+	NextID() (string, error)
 }
 
 func NewClient(serverURL string, verifyTLS bool) Proxmox {
@@ -94,4 +99,21 @@ func (p *proxmoxImpl) Login(username string, password string) error {
 
 func (p *proxmoxImpl) GetNode(nodeId string) Node {
 	return &nodeImpl{id: nodeId, proxmox: p}
+}
+
+func (p *proxmoxImpl) NextID() (string, error) {
+	resp, err := p.session.Get(p.serverURL+"/api2/json/cluster/nextid", nil)
+	if err != nil {
+		return "", err
+	}
+	if resp.StatusCode >= 400 {
+		return "", errors.New(resp.RawResponse.Status)
+	}
+	status := map[string]interface{}{}
+	err = resp.JSON(&status)
+	if err != nil {
+		return "", err
+	}
+
+	return status["data"].(string), nil
 }
