@@ -11,6 +11,7 @@ import (
 type Pool struct {
 	Containers []LXCStatus
 	//VirtualMachines []VMStatus
+	Comment string
 }
 
 type Proxmox interface {

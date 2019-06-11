@@ -106,6 +106,7 @@ func (p *proxmoxImpl) PoolInfo(name string) (Pool, error) {
 	var dataret struct {
 		Data struct {
 			Members []map[string]interface{} `json:"members"`
+			Comment string                   `json:"comment"`
 		} `json:"data"`
 	}
 	err = resp.JSON(&dataret)
@@ -127,6 +128,7 @@ func (p *proxmoxImpl) PoolInfo(name string) (Pool, error) {
 			ret.Containers = append(ret.Containers, lxc)
 		}
 	}
+	ret.Comment = dataret.Data.Comment
 
 	return ret, nil
 }
