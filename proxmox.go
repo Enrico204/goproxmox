@@ -16,6 +16,7 @@ type Pool struct {
 
 type Proxmox interface {
 	Login(username string, password string) error
+	Logout()
 
 	UserAdd(userid string, password string, comment string) error
 	UserDelete(userid string) error
@@ -34,31 +35,33 @@ type Proxmox interface {
 	NextID() (string, error)
 }
 
-func NewClient(serverURL string, verifyTLS bool) Proxmox {
+func NewClient(serverURL string, verifyTLS bool) (Proxmox, error) {
+	serverURLObject, err := url.Parse(serverURL)
+	if err != nil {
+		return nil, err
+	}
+
 	return &proxmoxImpl{
-		serverURL: serverURL,
-		ticket:    "",
-		csrf:      "",
+		serverURL:       serverURL,
+		serverURLObject: serverURLObject,
+		ticket:          "",
+		csrf:            "",
 		session: grequests.NewSession(&grequests.RequestOptions{
 			InsecureSkipVerify: !verifyTLS,
 			RequestTimeout:     5 * time.Second,
 		}),
-	}
+	}, nil
 }
 
 type proxmoxImpl struct {
-	ticket    string
-	csrf      string
-	serverURL string
-	session   *grequests.Session
+	ticket          string
+	csrf            string
+	serverURL       string
+	session         *grequests.Session
+	serverURLObject *url.URL
 }
 
 func (p *proxmoxImpl) Login(username string, password string) error {
-	serverURLObject, err := url.Parse(p.serverURL)
-	if err != nil {
-		// TODO: move to New()
-		return err
-	}
 
 	resp, err := p.session.Post(p.serverURL+"/api2/json/access/ticket", &grequests.RequestOptions{
 		Data: map[string]string{
@@ -91,11 +94,18 @@ func (p *proxmoxImpl) Login(username string, password string) error {
 	p.session.RequestOptions.Headers = map[string]string{
 		"CSRFPreventionToken": p.csrf,
 	}
-	p.session.HTTPClient.Jar.SetCookies(serverURLObject, []*http.Cookie{{
+	p.session.HTTPClient.Jar.SetCookies(p.serverURLObject, []*http.Cookie{{
 		Name:  "PVEAuthCookie",
 		Value: p.ticket,
 	}})
 	return nil
+}
+
+func (p *proxmoxImpl) Logout() {
+	p.ticket = ""
+	p.csrf = ""
+	p.session.RequestOptions.Headers = map[string]string{}
+	p.session.HTTPClient.Jar.SetCookies(p.serverURLObject, []*http.Cookie{})
 }
 
 func (p *proxmoxImpl) GetNode(nodeId string) Node {
