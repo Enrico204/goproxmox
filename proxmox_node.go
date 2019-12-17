@@ -83,10 +83,14 @@ func (n *nodeImpl) WaitForTask(taskid string, timeout time.Duration) error {
 		if err != nil {
 			return err
 		}
+
 		if status["data"].(map[string]interface{})["status"].(string) != "running" {
+			if status["data"].(map[string]interface{})["exitstatus"].(string) != "OK" {
+				return errors.New(status["data"].(map[string]interface{})["exitstatus"].(string))
+			}
 			return nil
 		}
-		time.Sleep(500 * time.Millisecond)
+		time.Sleep(250 * time.Millisecond)
 	}
 	return errors.New("Timeout while waiting for the operation to complete")
 }

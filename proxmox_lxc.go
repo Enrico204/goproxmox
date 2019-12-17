@@ -114,7 +114,11 @@ func (n *nodeImpl) NewLXC(lxc LXC, timeout time.Duration) (string, error) {
 		return "", err
 	}
 	if resp.StatusCode >= 400 {
-		return "", errors.New(resp.RawResponse.Status)
+		var errmsg struct {
+			Errors map[string]string
+		}
+		resp.JSON(&errmsg)
+		return "", errors.New(resp.RawResponse.Status + fmt.Sprint(errmsg))
 	}
 
 	ret := map[string]string{}

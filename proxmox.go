@@ -35,10 +35,25 @@ type Proxmox interface {
 	NextID() (string, error)
 }
 
-func NewClient(serverURL string, verifyTLS bool) (Proxmox, error) {
+func NewClient(serverURL string, verifyTLS bool, proxy string) (Proxmox, error) {
 	serverURLObject, err := url.Parse(serverURL)
 	if err != nil {
 		return nil, err
+	}
+
+	var greqOpts = grequests.RequestOptions{
+		InsecureSkipVerify: !verifyTLS,
+		RequestTimeout:     60 * time.Second,
+	}
+
+	if proxy != "" {
+		proxyUrl, err := url.Parse(proxy)
+		if err != nil {
+			return nil, err
+		}
+		greqOpts.Proxies = map[string]*url.URL{
+			"https": proxyUrl,
+		}
 	}
 
 	return &proxmoxImpl{
@@ -46,10 +61,7 @@ func NewClient(serverURL string, verifyTLS bool) (Proxmox, error) {
 		serverURLObject: serverURLObject,
 		ticket:          "",
 		csrf:            "",
-		session: grequests.NewSession(&grequests.RequestOptions{
-			InsecureSkipVerify: !verifyTLS,
-			RequestTimeout:     5 * time.Second,
-		}),
+		session:         grequests.NewSession(&greqOpts),
 	}, nil
 }
 
