@@ -1,17 +1,23 @@
 package main
 
 import (
+	"fmt"
 	"gitlab.com/Enrico204/goproxmox"
 	"os"
 	"time"
 )
 
 func main() {
-	px := goproxmox.NewClient(os.Args[1], false)
-	err := px.Login(os.Args[2], os.Args[3])
+	px, err := goproxmox.NewClient(os.Args[1], false, "")
 	if err != nil {
 		panic(err)
 	}
+	err = px.Login(os.Args[2], os.Args[3])
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println(px.GetNodeList())
 	//node := px.GetNode(os.Args[4])
 
 	//networks, err := node.ListNetworks()
@@ -46,7 +52,7 @@ func main() {
 	//err = node.ReloadNetworkConfig()
 	//err = node.RevertNetworkChanges()
 
-	err = px.PoolDeleteRecursive("SIM-2-2", 1 * time.Minute)
+	err = px.PoolDeleteRecursive("SIM-2-2", 1*time.Minute)
 	//fmt.Println(err)
 	//fmt.Println(px.PoolList())
 }

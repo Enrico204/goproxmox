@@ -5,7 +5,21 @@ import (
 	"time"
 )
 
+type NodeStatus struct {
+	SupportLevel    string  `json:"level"`
+	CPUUsagePercent float32 `json:"cpu"`
+	MaxCPU          int     `json:"maxcpu"`
+	MaxMem          int64   `json:"maxmem"`
+	Mem             int64   `json:"mem"`
+	NodeName        string  `json:"node"`
+	SSLFingerprint  string  `json:"ssl_fingerprint"`
+	Status          string  `json:"status"`
+	UptimeSeconds   int     `json:"uptime"`
+}
+
 type Node interface {
+	GetStatus() (NodeStatus, error)
+
 	ListLXC() ([]string, error)
 	GetLXC(lxcid string) VBase
 	NewLXC(lxc LXC, timeout time.Duration) (string, error)
@@ -27,6 +41,19 @@ type Node interface {
 type nodeImpl struct {
 	proxmox *proxmoxImpl `json:"-"`
 	id      string       `json:"vmid"`
+}
+
+func (n *nodeImpl) GetStatus() (NodeStatus, error) {
+	nodes, err := n.proxmox.GetNodeList()
+	if err != nil {
+		return NodeStatus{}, err
+	}
+	for _, v := range nodes {
+		if v.NodeName == n.id {
+			return v, nil
+		}
+	}
+	return NodeStatus{}, errors.New("can't find this node in the cluster")
 }
 
 func (n *nodeImpl) GetLXC(lxcid string) VBase {

@@ -30,6 +30,7 @@ type Proxmox interface {
 	PoolList() ([]string, error)
 	PoolInfo(name string) (Pool, error)
 
+	GetNodeList() ([]NodeStatus, error)
 	GetNode(nodeId string) Node
 
 	NextID() (string, error)
@@ -118,6 +119,26 @@ func (p *proxmoxImpl) Logout() {
 	p.csrf = ""
 	p.session.RequestOptions.Headers = map[string]string{}
 	p.session.HTTPClient.Jar.SetCookies(p.serverURLObject, []*http.Cookie{})
+}
+
+func (p *proxmoxImpl) GetNodeList() ([]NodeStatus, error) {
+	resp, err := p.session.Get(p.serverURL+"/api2/json/nodes/", nil)
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode >= 400 {
+		return nil, errors.New(resp.RawResponse.Status)
+	}
+
+	var respobj struct {
+		Data []NodeStatus `json:"data"`
+	}
+	err = resp.JSON(&respobj)
+	if err != nil {
+		return nil, err
+	}
+
+	return respobj.Data, nil
 }
 
 func (p *proxmoxImpl) GetNode(nodeId string) Node {
