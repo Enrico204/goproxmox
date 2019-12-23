@@ -14,8 +14,8 @@ type VBase interface {
 	Start(timeout time.Duration) error
 	Stop(timeout time.Duration) error
 	Shutdown(timeout time.Duration) error
-	Delete(timeout time.Duration) error
-	Clone(newhostname string, pool string, full bool, timeout time.Duration) error
+	Delete(purge bool, timeout time.Duration) error
+	Clone(newhostname string, pool string, full bool, newNodeName string, timeout time.Duration) error
 	//Info() error
 }
 
@@ -135,7 +135,11 @@ func (v *vbaseimpl) Shutdown(timeout time.Duration) error {
 	return v.node.WaitForTask(ret["data"], timeout)
 }
 
-func (v *vbaseimpl) Delete(timeout time.Duration) error {
+func (v *vbaseimpl) Delete(purge bool, timeout time.Duration) error {
+	var reqopts = grequests.RequestOptions{}
+	if purge {
+		reqopts.Params = map[string]string{"purge": "1"}
+	}
 	resp, err := v.node.proxmox.session.Delete(fmt.Sprintf("%s/api2/json/nodes/%s/%s/%s", v.node.proxmox.serverURL, v.node.id, v.vmtype, v.id), nil)
 	if err != nil {
 		return err
@@ -153,7 +157,7 @@ func (v *vbaseimpl) Delete(timeout time.Duration) error {
 	return v.node.WaitForTask(ret["data"], timeout)
 }
 
-func (v *vbaseimpl) Clone(newhostname string, pool string, full bool, timeout time.Duration) error {
+func (v *vbaseimpl) Clone(newhostname string, pool string, full bool, newNodeName string, timeout time.Duration) error {
 	newVmId, err := v.node.proxmox.NextID()
 	if err != nil {
 		return err
@@ -174,6 +178,10 @@ func (v *vbaseimpl) Clone(newhostname string, pool string, full bool, timeout ti
 
 	if full {
 		reqbody["full"] = "1"
+	}
+
+	if newNodeName != "" {
+		reqbody["target"] = newNodeName
 	}
 
 	resp, err := v.node.proxmox.session.Post(fmt.Sprintf("%s/api2/json/nodes/%s/%s/%s/clone", v.node.proxmox.serverURL, v.node.id, v.vmtype, v.id),

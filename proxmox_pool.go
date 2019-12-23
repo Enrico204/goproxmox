@@ -48,7 +48,7 @@ func (p *proxmoxImpl) PoolDeleteRecursive(name string, timeout time.Duration) er
 				return err
 			}
 		}
-		err = lxc.Delete(timeout)
+		err = lxc.Delete(true, timeout)
 		if err != nil {
 			return err
 		}
