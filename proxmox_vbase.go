@@ -20,6 +20,11 @@ type VBase interface {
 
 	SetNIC(settings VBaseNICSettings) error
 	DeleteNIC(id int) error
+
+	GuestPing() (bool, error)
+	GuestExecAsync(cmd string) (uint, error)
+	GuestExecStatus(pid uint) (GuestExecResult, error)
+	GuestExecSync(cmd string) (GuestExecResult, error)
 }
 
 type LXCStatus struct {
