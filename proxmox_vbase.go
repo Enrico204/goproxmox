@@ -15,8 +15,11 @@ type VBase interface {
 	Stop(timeout time.Duration) error
 	Shutdown(timeout time.Duration) error
 	Delete(purge bool, timeout time.Duration) error
-	Clone(newhostname string, pool string, full bool, newNodeName string, timeout time.Duration) error
+	Clone(newhostname string, pool string, full bool, newNodeName string, timeout time.Duration) (string, error)
 	//Info() error
+
+	SetNIC(settings VBaseNICSettings) error
+	DeleteNIC(id int) error
 }
 
 type LXCStatus struct {
@@ -157,10 +160,10 @@ func (v *vbaseimpl) Delete(purge bool, timeout time.Duration) error {
 	return v.node.WaitForTask(ret["data"], timeout)
 }
 
-func (v *vbaseimpl) Clone(newhostname string, pool string, full bool, newNodeName string, timeout time.Duration) error {
+func (v *vbaseimpl) Clone(newhostname string, pool string, full bool, newNodeName string, timeout time.Duration) (string, error) {
 	newVmId, err := v.node.proxmox.NextID()
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	reqbody := map[string]string{
@@ -189,17 +192,17 @@ func (v *vbaseimpl) Clone(newhostname string, pool string, full bool, newNodeNam
 			Data: reqbody,
 		})
 	if err != nil {
-		return err
+		return "", err
 	}
 	if resp.StatusCode >= 400 {
-		return errors.New(resp.RawResponse.Status)
+		return "", errors.New(resp.RawResponse.Status)
 	}
 
 	ret := map[string]string{}
 	err = resp.JSON(&ret)
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	return v.node.WaitForTask(ret["data"], timeout)
+	return newVmId, v.node.WaitForTask(ret["data"], timeout)
 }
