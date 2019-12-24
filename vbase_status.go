@@ -3,8 +3,6 @@ package goproxmox
 import (
 	"errors"
 	"fmt"
-	"github.com/levigross/grequests"
-	"time"
 )
 
 type MemberStatus struct {
@@ -24,7 +22,7 @@ type MemberStatus struct {
 	DiskWrite int64       `json:"diskwrite"`
 	Lock      string      `json:"lock"`
 	Status    string      `json:"status"`
-	Type      string      `json:"type"`
+	Type      string      `json:"type"` // Sometimes it's an empty string?
 	HA        struct {
 		Managed int `json:"managed"`
 	} `json:"ha"`
@@ -50,5 +48,6 @@ func (v *vbaseimpl) Status() (*MemberStatus, error) {
 		Data MemberStatus `json:"data"`
 	}
 	err = resp.JSON(&ret)
+
 	return &ret.Data, err
 }

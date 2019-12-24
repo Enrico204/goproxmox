@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"github.com/levigross/grequests"
+	"gitlab.com/Enrico204/goproxmox/proxmoxssh"
+	"strconv"
 	"time"
 )
 
@@ -18,6 +20,10 @@ type GuestExecResult struct {
 }
 
 func (v *vbaseimpl) GuestExecAsync(cmd string) (uint, error) {
+	if v.vmtype == "lxc" {
+		return 0, errors.New("async exec command not available for LXC")
+	}
+
 	var reqopt = grequests.RequestOptions{
 		Data: map[string]string{
 			"command": cmd,
@@ -41,6 +47,10 @@ func (v *vbaseimpl) GuestExecAsync(cmd string) (uint, error) {
 }
 
 func (v *vbaseimpl) GuestExecStatus(pid uint) (GuestExecResult, error) {
+	if v.vmtype == "lxc" {
+		return GuestExecResult{}, errors.New("async exec commands not available for LXC")
+	}
+
 	var reqopt = grequests.RequestOptions{
 		Params: map[string]string{
 			"pid": fmt.Sprint(pid),
@@ -63,6 +73,25 @@ func (v *vbaseimpl) GuestExecStatus(pid uint) (GuestExecResult, error) {
 }
 
 func (v *vbaseimpl) GuestExecSync(cmd string) (GuestExecResult, error) {
+	if v.vmtype == "lxc" {
+		servercfg, ok := v.node.proxmox.sshcfg[v.node.id]
+		if !ok {
+			return GuestExecResult{}, errors.New("guest commands not available for LXC without SSH to hypervisor")
+		}
+		containerId, _ := strconv.Atoi(v.id)
+		cmd = proxmoxssh.Sanitize(cmd)
+		out, err := proxmoxssh.SimpleRemoteRun(servercfg, fmt.Sprintf("pct exec %d \"%s\"", containerId, cmd), "")
+		return GuestExecResult{
+			ExitCode:     0,
+			Exited:       true,
+			OutData:      out,
+			OutTruncated: false,
+			ErrData:      "",
+			ErrTruncated: false,
+			Signal:       0,
+		}, err
+	}
+
 	pid, err := v.GuestExecAsync(cmd)
 	if err != nil {
 		return GuestExecResult{}, err

@@ -6,6 +6,7 @@ import (
 
 type VBase interface {
 	Id() string
+	Type() string
 
 	Status() (*MemberStatus, error)
 	Start(timeout time.Duration) error
@@ -23,6 +24,7 @@ type VBase interface {
 	GuestExecAsync(cmd string) (uint, error)
 	GuestExecStatus(pid uint) (GuestExecResult, error)
 	GuestExecSync(cmd string) (GuestExecResult, error)
+	GuestSetUserPassword(username string, password string) error
 }
 
 type vbaseimpl struct {
@@ -33,4 +35,8 @@ type vbaseimpl struct {
 
 func (v *vbaseimpl) Id() string {
 	return v.id
+}
+
+func (v *vbaseimpl) Type() string {
+	return v.vmtype
 }
