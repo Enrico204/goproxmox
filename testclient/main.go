@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"gitlab.com/Enrico204/goproxmox"
+	"net"
 	"os"
 	"time"
 )
@@ -17,42 +18,50 @@ func main() {
 		panic(err)
 	}
 
-	fmt.Println(px.GetNodeList())
-	//node := px.GetNode(os.Args[4])
+	node := px.GetNode(os.Args[4])
 
-	//networks, err := node.ListNetworks()
-	//fmt.Println(err)
-	//for _, net := range networks {
-	//	fmt.Print(net.IFace, " (", net.Type, ")")
-	//	if net.Address != nil {
-	//		fmt.Print(" -> ", *net.Address)
-	//	}
-	//	if net.Netmask != nil {
-	//		fmt.Print("/", *net.Netmask)
-	//	}
-	//	if net.Gateway != nil {
-	//		fmt.Print(" , ", *net.Gateway)
-	//	}
-	//
-	//	if net.OVS_Bridge != nil {
-	//		fmt.Print(" bridged to ", *net.OVS_Bridge)
-	//	}
-	//	if net.OVS_Ports != nil {
-	//		fmt.Print(" bridging ports: ", *net.OVS_Ports)
-	//	}
-	//	fmt.Println()
-	//}
+	fmt.Println(node.GetVM("100").GuestPing())
+	os.Exit(0)
 
-	//comments := "pippo"
-	//err = node.CreateNetworkConfig(goproxmox.Network{
-	//	IFace: "vmbr10",
-	//	Type: "bridge",
-	//	Comments: &comments,
-	//})
-	//err = node.ReloadNetworkConfig()
-	//err = node.RevertNetworkChanges()
-
-	err = px.PoolDeleteRecursive("SIM-2-2", 1*time.Minute)
-	//fmt.Println(err)
-	//fmt.Println(px.PoolList())
+	_, err = node.NewLXC(goproxmox.LXC{
+		OSTemplate:   "local:vztmpl/debian-10.0-standard_10.0-1_amd64.tar.gz",
+		Password:     "Passw0rd.1",
+		Hostname:     "Hostname",
+		Unprivileged: 1,
+		RootFS:       "local-lvm:8",
+		Cores:        1,
+		Memory:       512,
+		Swap:         512,
+		Net: []goproxmox.VBaseNICSettings{
+			{
+				Id:       0,
+				Bridge:   "vmbr0",
+				Tag:      1234,
+				Firewall: false,
+				Name:     "eth0",
+				DHCPv4:   true,
+			},
+			{
+				Id:       1,
+				Bridge:   "vmbr0",
+				Tag:      1235,
+				Firewall: false,
+				Name:     "eth1",
+				Manualv4: true,
+			},
+			{
+				Id:       2,
+				Bridge:   "vmbr0",
+				Tag:      1236,
+				Firewall: false,
+				Name:     "eth2",
+				IPv4: net.IPNet{
+					IP:   net.ParseIP("1.2.3.4"),
+					Mask: net.IPv4Mask(255, 255, 255, 0),
+				},
+				Gateway4: net.ParseIP("1.1.1.1"),
+			},
+		},
+	}, 5*time.Minute)
+	fmt.Println(err)
 }

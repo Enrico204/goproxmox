@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/levigross/grequests"
-	"strings"
 	"time"
 )
 
@@ -16,31 +15,6 @@ type GuestExecResult struct {
 	ErrData      string  `json:"err-data,omitempty"`
 	ErrTruncated BitBool `json:"err-truncated,omitempty"`
 	Signal       int     `json:"signal"`
-}
-
-func (v *vbaseimpl) WaitForGuest(timeout time.Duration) (bool, error) {
-	startts := time.Now()
-	b, err := v.GuestPing()
-	for err == nil && !b && time.Now().Sub(startts) < timeout {
-		if !b {
-			b, err = v.GuestPing()
-		}
-		time.Sleep(50 * time.Millisecond)
-	}
-	return b, err
-}
-
-func (v *vbaseimpl) GuestPing() (bool, error) {
-	resp, err := v.node.proxmox.session.Post(fmt.Sprintf("%s/api2/json/nodes/%s/%s/%s/agent/ping", v.node.proxmox.serverURL, v.node.id, v.vmtype, v.id), nil)
-	if err != nil {
-		return false, err
-	} else if resp.StatusCode == 500 && strings.Contains(resp.RawResponse.Status, "not running") {
-		return false, nil
-	} else if resp.StatusCode >= 400 {
-		return false, errors.New(resp.RawResponse.Status)
-	} else {
-		return true, nil
-	}
 }
 
 func (v *vbaseimpl) GuestExecAsync(cmd string) (uint, error) {
