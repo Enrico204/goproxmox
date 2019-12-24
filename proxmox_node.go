@@ -102,7 +102,11 @@ func (n *nodeImpl) WaitForTask(taskid string, timeout time.Duration) error {
 		if err != nil {
 			return err
 		}
-		if resp.StatusCode >= 400 {
+		if resp.StatusCode == 599 {
+			// Too many requests, wait more
+			time.Sleep(1 * time.Second)
+			continue
+		} else if resp.StatusCode >= 400 {
 			return errors.New(resp.RawResponse.Status)
 		}
 		status := map[string]interface{}{}

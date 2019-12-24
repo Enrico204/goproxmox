@@ -40,15 +40,21 @@ func (p *proxmoxImpl) PoolDeleteRecursive(name string, timeout time.Duration) er
 	if err != nil {
 		return err
 	}
-	for _, lxcinfo := range poolinfo.Containers {
-		lxc := p.GetNode(*lxcinfo.Node).GetLXC(lxcinfo.VMID)
-		if lxcinfo.Status == "running" {
-			err = lxc.Stop(timeout)
+	for _, memberinfo := range poolinfo.Members {
+		var memberobj VBase
+		if memberinfo.Type == "lxc" {
+			memberobj = p.GetNode(*memberinfo.Node).GetLXC(memberinfo.VMID)
+		} else {
+			memberobj = p.GetNode(*memberinfo.Node).GetVM(memberinfo.VMID)
+		}
+
+		if memberinfo.Status == "running" {
+			err = memberobj.Stop(timeout)
 			if err != nil {
 				return err
 			}
 		}
-		err = lxc.Delete(true, timeout)
+		err = memberobj.Delete(true, timeout)
 		if err != nil {
 			return err
 		}
@@ -93,7 +99,7 @@ func (p *proxmoxImpl) PoolList() ([]string, error) {
 
 func (p *proxmoxImpl) PoolInfo(name string) (Pool, error) {
 	ret := Pool{
-		Containers: []LXCStatus{},
+		Members: []MemberStatus{},
 	}
 	resp, err := p.session.Get(p.serverURL+"/api2/json/pools/"+name, nil)
 	if err != nil {
@@ -109,24 +115,24 @@ func (p *proxmoxImpl) PoolInfo(name string) (Pool, error) {
 			Comment string                   `json:"comment"`
 		} `json:"data"`
 	}
+
 	err = resp.JSON(&dataret)
 	if err != nil {
 		return ret, err
 	}
 	for _, item := range dataret.Data.Members {
-		if item["type"].(string) == "lxc" {
-
-			// Fix bad API signature
-			item["vmid"] = fmt.Sprint(item["vmid"])
+		// Fix bad API signature
+		item["vmid"] = fmt.Sprint(item["vmid"])
+		/*if item["type"].(string) == "lxc" {
 			item["template"] = fmt.Sprint(item["template"])
+		}*/
 
-			lxc := LXCStatus{}
-			err = mapstructure.Decode(item, &lxc)
-			if err != nil {
-				return ret, err
-			}
-			ret.Containers = append(ret.Containers, lxc)
+		mb := MemberStatus{}
+		err = mapstructure.Decode(item, &mb)
+		if err != nil {
+			return ret, err
 		}
+		ret.Members = append(ret.Members, mb)
 	}
 	ret.Comment = dataret.Data.Comment
 

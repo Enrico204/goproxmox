@@ -18,6 +18,18 @@ type GuestExecResult struct {
 	Signal       int     `json:"signal"`
 }
 
+func (v *vbaseimpl) WaitForGuest(timeout time.Duration) (bool, error) {
+	startts := time.Now()
+	b, err := v.GuestPing()
+	for err == nil && !b && time.Now().Sub(startts) < timeout {
+		if !b {
+			b, err = v.GuestPing()
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+	return b, err
+}
+
 func (v *vbaseimpl) GuestPing() (bool, error) {
 	resp, err := v.node.proxmox.session.Post(fmt.Sprintf("%s/api2/json/nodes/%s/%s/%s/agent/ping", v.node.proxmox.serverURL, v.node.id, v.vmtype, v.id), nil)
 	if err != nil {

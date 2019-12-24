@@ -10,7 +10,7 @@ import (
 type VBase interface {
 	Id() string
 
-	Status() (*LXCStatus, error)
+	Status() (*MemberStatus, error)
 	Start(timeout time.Duration) error
 	Stop(timeout time.Duration) error
 	Shutdown(timeout time.Duration) error
@@ -21,16 +21,16 @@ type VBase interface {
 	SetNIC(settings VBaseNICSettings) error
 	DeleteNIC(id int) error
 
+	WaitForGuest(timeout time.Duration) (bool, error)
 	GuestPing() (bool, error)
 	GuestExecAsync(cmd string) (uint, error)
 	GuestExecStatus(pid uint) (GuestExecResult, error)
 	GuestExecSync(cmd string) (GuestExecResult, error)
 }
 
-type LXCStatus struct {
+type MemberStatus struct {
 	VMID      string      `json:"vmid"`
 	Name      string      `json:"name"`
-	Template  string      `json:"template"`
 	PID       string      `json:"pid"`
 	CPUs      int         `json:"cpus"`
 	CPU       float64     `json:"cpu"`
@@ -53,6 +53,9 @@ type LXCStatus struct {
 	NetOut int64 `json:"netout"`
 
 	Node *string `json:"node"`
+
+	// LXC only
+	// TODO: Template  string      `json:"template"`
 }
 
 type vbaseimpl struct {
@@ -65,7 +68,7 @@ func (v *vbaseimpl) Id() string {
 	return v.id
 }
 
-func (v *vbaseimpl) Status() (*LXCStatus, error) {
+func (v *vbaseimpl) Status() (*MemberStatus, error) {
 	resp, err := v.node.proxmox.session.Get(fmt.Sprintf("%s/api2/json/nodes/%s/%s/%s/status/current", v.node.proxmox.serverURL, v.node.id, v.vmtype, v.id), nil)
 	if err != nil {
 		return nil, err
@@ -75,7 +78,7 @@ func (v *vbaseimpl) Status() (*LXCStatus, error) {
 	}
 
 	var ret struct {
-		Data LXCStatus `json:"data"`
+		Data MemberStatus `json:"data"`
 	}
 	err = resp.JSON(&ret)
 	return &ret.Data, err

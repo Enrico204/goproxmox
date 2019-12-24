@@ -9,7 +9,7 @@ import (
 )
 
 type Pool struct {
-	Containers []LXCStatus
+	Members []MemberStatus
 	//VirtualMachines []VMStatus
 	Comment string
 }
