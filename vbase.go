@@ -25,6 +25,8 @@ type VBase interface {
 	GuestExecStatus(pid uint) (GuestExecResult, error)
 	GuestExecSync(cmd string) (GuestExecResult, error)
 	GuestSetUserPassword(username string, password string) error
+	GuestFileRead(fname string) (string, error)
+	GuestFileWrite(fname string, content string) error
 }
 
 type vbaseimpl struct {

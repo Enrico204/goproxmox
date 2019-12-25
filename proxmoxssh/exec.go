@@ -3,7 +3,9 @@ package proxmoxssh
 import (
 	"bytes"
 	"fmt"
+	"github.com/pkg/errors"
 	"golang.org/x/crypto/ssh"
+	"io"
 	"net"
 )
 
@@ -14,7 +16,7 @@ func SimpleRemoteRun(cfg Config, cmd string, stdininput string) (string, error) 
 		// Prepare key
 		key, err := ssh.ParsePrivateKey(cfg.PrivateKey)
 		if err != nil {
-			return "", err
+			return "", errors.Wrap(err, "parse private key")
 		}
 		authmethods = append(authmethods, ssh.PublicKeys(key))
 	}
@@ -27,7 +29,7 @@ func SimpleRemoteRun(cfg Config, cmd string, stdininput string) (string, error) 
 	if cfg.HostPublicKey != nil {
 		hostkey, err := ssh.ParsePublicKey(cfg.HostPublicKey)
 		if err != nil {
-			return "", err
+			return "", errors.Wrap(err, "parse public key")
 		}
 		hostKeyCallback = ssh.FixedHostKey(hostkey)
 	}
@@ -42,13 +44,13 @@ func SimpleRemoteRun(cfg Config, cmd string, stdininput string) (string, error) 
 	// Connect
 	client, err := ssh.Dial("tcp", net.JoinHostPort(cfg.Hostname, fmt.Sprint(cfg.Port)), config)
 	if err != nil {
-		return "", err
+		return "", errors.Wrap(err, "dial")
 	}
 
 	// Create a session
 	session, err := client.NewSession()
 	if err != nil {
-		return "", err
+		return "", errors.Wrap(err, "create new session")
 	}
 
 	// Retrieve the output
@@ -61,17 +63,17 @@ func SimpleRemoteRun(cfg Config, cmd string, stdininput string) (string, error) 
 	// Run the command
 	err = session.Run(cmd)
 	if err != nil {
-		return "", err
+		return "", errors.Wrap(err, "run command")
 	}
 
 	// Cleanup
 	err = session.Close()
-	if err != nil {
-		return "", err
+	if err != nil && err != io.EOF {
+		return "", errors.Wrap(err, "closing session")
 	}
 	err = client.Close()
 	if err != nil {
-		return "", err
+		return "", errors.Wrap(err, "closing client")
 	}
 
 	// End
