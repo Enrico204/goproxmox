@@ -16,6 +16,7 @@ type VBase interface {
 	Clone(newhostname string, pool string, full bool, newNodeName string, timeout time.Duration) (string, error)
 	//Info() error
 
+	GetNIC(idx int) (VBaseNICSettings, error)
 	SetNIC(settings VBaseNICSettings) error
 	DeleteNIC(id int) error
 

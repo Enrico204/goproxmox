@@ -33,19 +33,33 @@ func (settings VBaseNICSettings) ToProxmoxString(vmtype string) string {
 		}
 
 		niccfg = append(niccfg, "name="+settings.Name)
+		// IPv4
 		if settings.DHCPv4 {
 			niccfg = append(niccfg, "ip=dhcp")
 		} else if settings.Manualv4 {
 			niccfg = append(niccfg, "ip=manual")
-		} else if settings.IPv4.String() != "" && !settings.IPv4.IP.IsUnspecified() {
-			niccfg = append(niccfg, "ip="+settings.IPv4.String())
+		} else if !settings.IPv4.Equal(nil) && !settings.IPv4.IsUnspecified() {
+			cidr, _ := settings.Maskv4.Size()
+			niccfg = append(niccfg, fmt.Sprintf("ip=%s/%d", settings.IPv4.String(), cidr))
 		}
-
 		if !settings.Gateway4.Equal(nil) && !settings.Gateway4.IsUnspecified() {
 			niccfg = append(niccfg, "gw="+settings.Gateway4.String())
 		}
 
-		// TODO: IPv6
+		// IPv6
+		if settings.DHCPv6 {
+			niccfg = append(niccfg, "ip6=dhcp")
+		} else if settings.Manualv6 {
+			niccfg = append(niccfg, "ip6=manual")
+		} else if settings.Autov6 {
+			niccfg = append(niccfg, "ip6=auto")
+		} else if !settings.IPv6.Equal(nil) && !settings.IPv6.IsUnspecified() {
+			cidr, _ := settings.Maskv6.Size()
+			niccfg = append(niccfg, fmt.Sprintf("ip6=%s/%d", settings.IPv6.String(), cidr))
+		}
+		if !settings.Gateway6.Equal(nil) && !settings.Gateway6.IsUnspecified() {
+			niccfg = append(niccfg, "gw6="+settings.Gateway6.String())
+		}
 	} else {
 		model := "virtio"
 		if settings.Model != "" {

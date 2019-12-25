@@ -21,7 +21,7 @@ type VBaseNICSettings struct {
 	HardwareAddress *net.HardwareAddr
 
 	// Rate limit the speed to this mbps
-	Rate int
+	Rate float32
 
 	// VLAN trunks
 	Trunks []string
@@ -36,16 +36,18 @@ type VBaseNICSettings struct {
 
 	// *** LXC only
 	Name string
-	MTU  int
+	MTU  uint
 
 	Manualv4 bool
 	DHCPv4   bool
-	IPv4     net.IPNet
+	IPv4     net.IP
+	Maskv4   net.IPMask
 	Gateway4 net.IP
 
 	Manualv6 bool
 	DHCPv6   bool
 	Autov6   bool
-	IPv6     net.IPNet
+	IPv6     net.IP
+	Maskv6   net.IPMask
 	Gateway6 net.IP
 }
