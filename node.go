@@ -17,6 +17,7 @@ type NodeStatus struct {
 }
 
 type Node interface {
+	Id() string
 	GetStatus() (NodeStatus, error)
 
 	ListLXC() ([]string, error)
@@ -39,7 +40,11 @@ type Node interface {
 
 type nodeImpl struct {
 	proxmox *proxmoxImpl `json:"-"`
-	id      string       `json:"vmid"`
+	id      string       `json:"nodeid"`
+}
+
+func (n *nodeImpl) Id() string {
+	return n.id
 }
 
 func (n *nodeImpl) GetLXC(lxcid string) VBase {

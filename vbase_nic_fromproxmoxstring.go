@@ -72,7 +72,11 @@ func (settings *VBaseNICSettings) FromProxmoxString(cfg string) error {
 			settings.Gateway4 = net.ParseIP(s[1])
 		case "gw6":
 			settings.Gateway6 = net.ParseIP(s[1])
+		case "model":
+			settings.Model = s[1]
 		case "macaddr":
+			fallthrough
+		case "hwaddr":
 			fallthrough
 		case "e1000-82540em":
 			fallthrough
@@ -81,8 +85,6 @@ func (settings *VBaseNICSettings) FromProxmoxString(cfg string) error {
 		case "e1000-82545em":
 			fallthrough
 		case "i82551":
-			fallthrough
-		case "model":
 			fallthrough
 		case "i82557b":
 			fallthrough
