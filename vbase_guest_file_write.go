@@ -18,6 +18,10 @@ func (v *vbaseimpl) GuestFileWrite(fname string, content string) error {
 		return proxmoxssh.PctPutFile(servercfg, containerId, fname, content)
 	}
 
+	if len(content) > 60*1024 {
+		return errors.New("file size exceeding max (60k) allowed by APIs")
+	}
+
 	var reqopt = grequests.RequestOptions{
 		Data: map[string]string{
 			"file":    fname,
